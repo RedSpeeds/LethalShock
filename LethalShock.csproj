@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net462</TargetFramework>
+    <TargetFramework>net472</TargetFramework>
     <AssemblyName>LethalShock</AssemblyName>
     <Description>PiShock integration</Description>
     <Version>1.0.0</Version>
@@ -10,9 +10,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="FodyWeavers.xsd" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.*" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="1.*" />
+	  <PackageReference Include="Costura.Fody" Version="5.7.0">
+		  <PrivateAssets>all</PrivateAssets>
+	  </PackageReference>
+	  <PackageReference Include="Fody" Version="6.8.0">
+		  <IncludeAssets>runtime; build; compile; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		  <PrivateAssets>all</PrivateAssets>
+	  </PackageReference>
     <PackageReference Include="HarmonyX" Version="2.10.2" />
     <PackageReference Include="Tueffy.PiShockApi" Version="1.3.2" />
     <PackageReference Include="UnityEngine.Modules" Version="2022.3.9" IncludeAssets="compile" />
@@ -22,9 +33,6 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>Libraries\Assembly-CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="netstandard">
-      <HintPath>Libraries\netstandard.dll</HintPath>
-    </Reference>
     <Reference Include="Unity.Netcode.Runtime">
       <HintPath>Libraries\Unity.Netcode.Runtime.dll</HintPath>
     </Reference>
@@ -32,5 +40,7 @@
       <HintPath>Libraries\Unity.TextMeshPro.dll</HintPath>
     </Reference>
   </ItemGroup>
+	
+	
   
 </Project>
