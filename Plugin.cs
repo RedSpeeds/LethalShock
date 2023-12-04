@@ -35,6 +35,7 @@ namespace LethalShock
         internal ConfigEntry<bool> vibrateOnly;
         internal ConfigEntry<bool> warningVibration;
         internal ConfigEntry<bool> shockBasedOnHealth;
+        internal ConfigEntry<bool> shockOnFired;
 
         internal ConfigEntry<int> duration;
         internal ConfigEntry<int> maxIntensity;
@@ -72,6 +73,7 @@ namespace LethalShock
             durationFired = Config.Bind("LethalShock", "durationFired", 10, "Duration of the the shock/vibration when you get fired (gameover)");
             intensityFired = Config.Bind("LethalShock", "intensityFired", 100, "Intensity of the shock/vibration when you get fired (gameover)");
             modeFired = Config.Bind("LethalShock", "modeFired", ShockModes.ALL, "What to do when you have multiple shockers when you get fired (gameover)");
+            shockOnFired = Config.Bind("LethalShock", "shockOnFired", true, "Should you get shocked when fired?");
             harmony.PatchAll(typeof(LethalShock));
             harmony.PatchAll(typeof(PlayerControllerBPatch));
             harmony.PatchAll(typeof(StartOfRoundPatch));
@@ -91,16 +93,24 @@ namespace LethalShock
                 mls.LogInfo("Shocking based on health for " + maxHealthShock);
                 DoOperation(maxHealthShock, duration.Value, shockMode.Value);
             }
-            else
+            else if(shockOnDamage.Value)
             {
                 mls.LogInfo("Shocking based on damage for " + maxDmgShock);
                 DoOperation(maxDmgShock, duration.Value, shockMode.Value);
             }
         }
+        private bool DidDeath = false;
         internal void DoDeath()
         {
+            if (DidDeath || !shockOnDeath.Value) return;
             Logger.LogInfo("Death shock");
             DoOperation(intensityDeath.Value, durationDeath.Value, modeDeath.Value);
+            DidDeath = true;
+            Task.Run(async () =>
+            {
+                await Task.Delay(20000);
+                DidDeath = false;
+            });
         }
         private bool DidFired = false;
         internal void DoFired()
@@ -140,12 +150,12 @@ namespace LethalShock
                         mls.LogWarning("Vibrating with delay");
                         await Task.Delay(duration+1 * 1000);
                         mls.LogWarning("Shocking after delay");
-                        user.Shock(intensity, duration).Start();
+                        await user.Shock(intensity, duration);
                     }
                 }
                 else
                 {
-                    user.Shock(intensity, duration).Start();
+                    await user.Shock(intensity, duration);
                 }
 
             }
