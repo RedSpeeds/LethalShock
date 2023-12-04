@@ -44,8 +44,11 @@ namespace LethalShock
         internal ConfigEntry<int> durationDeath;
         internal ConfigEntry<int> intensityDeath;
         internal ConfigEntry<ShockModes> modeDeath;
-        
 
+        internal ConfigEntry<int> durationFired;
+        internal ConfigEntry<int> intensityFired;
+        internal ConfigEntry<ShockModes> modeFired;
+        
         private void Awake()
         {
             // Plugin startup logic
@@ -66,8 +69,12 @@ namespace LethalShock
             durationDeath = Config.Bind("LethalShock", "durationDeath", 5, "Duration of the shock/vibration when you die");
             intensityDeath = Config.Bind("LethalShock", "intensityDeath", 100, "The intensity of the shock/vibration when you die");
             modeDeath = Config.Bind("LethalShock", "modeDeath", ShockModes.ALL, "What to do when you have multiple shockers when you die");
+            durationFired = Config.Bind("LethalShock", "durationFired", 10, "Duration of the the shock/vibration when you get fired (gameover)");
+            intensityFired = Config.Bind("LethalShock", "intensityFired", 100, "Intensity of the shock/vibration when you get fired (gameover)");
+            modeFired = Config.Bind("LethalShock", "modeFired", ShockModes.ALL, "What to do when you have multiple shockers when you get fired (gameover)");
             harmony.PatchAll(typeof(LethalShock));
             harmony.PatchAll(typeof(PlayerControllerBPatch));
+            harmony.PatchAll(typeof(StartOfRoundPatch));
             if (instance == null)
             {
                 instance = this;
@@ -86,7 +93,7 @@ namespace LethalShock
             }
             else
             {
-                mls.LogInfo("Shocking based on health for " + maxDmgShock);
+                mls.LogInfo("Shocking based on damage for " + maxDmgShock);
                 DoOperation(maxDmgShock, duration.Value, shockMode.Value);
             }
         }
@@ -94,6 +101,19 @@ namespace LethalShock
         {
             Logger.LogInfo("Death shock");
             DoOperation(intensityDeath.Value, durationDeath.Value, modeDeath.Value);
+        }
+        private bool DidFired = false;
+        internal void DoFired()
+        {
+            if (DidFired) return;
+            mls.LogInfo("Fired shock");
+            DoOperation(intensityFired.Value, durationFired.Value, modeFired.Value);
+            DidFired = true;
+            Task.Run(async () =>
+            {
+                await Task.Delay(durationFired.Value * 1000);
+                DidFired = false;
+            });
         }
 
         private async void DoOperation(int intensity, int duration, ShockModes mode)
@@ -201,6 +221,15 @@ namespace LethalShock.Patches
         private static void DamagePatch(int ___health, int damageNumber)
         {
             LethalShock.instance.DoDamage(damageNumber, ___health);
+        }
+    }
+    internal class StartOfRoundPatch
+    {
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.FirePlayersAfterDeadlineClientRpc))]
+        [HarmonyPostfix]
+        private static void FirePlayersAfterDeadlinePatch()
+        {
+            LethalShock.instance.DoFired();
         }
     }
 
