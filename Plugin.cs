@@ -4,8 +4,6 @@ using BepInEx.Logging;
 using GameNetcodeStuff;
 using HarmonyLib;
 using LethalShock.Patches;
-using PiShockApi;
-using PiShockApi.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -22,7 +20,6 @@ namespace LethalShock
             FIRST, LAST, RANDOM, ROUND_ROBIN, RANDOM_ALL, ALL
         }
         private readonly Harmony harmony = new("LethalShock");
-        private readonly PiShockApiClient pishock = new PiShockApiClient();
         internal readonly string pishockLogId = "LethalShock (Lethal company)";
         private readonly Random rnd = new();
 
@@ -107,28 +104,29 @@ namespace LethalShock
             {
                 mls.LogDebug("Running DoOperation for shocker coded " + codes[i]);
                 if (!picked[i]) continue;
-                PiShockUser user = new()
+                PiShockApi user = new()
                 {
-                    Username = pishockUsername.Value,
-                    ApiKey = pishockApiKey.Value,
-                    Code = codes[i]
+                    username = pishockUsername.Value,
+                    apiKey = pishockApiKey.Value,
+                    code = codes[i],
+                    senderName = pishockLogId
                 };
 
                 if(vibrateOnly.Value || warningVibration.Value)
                 {
-                    pishock.SendVibrationAsync(user, intensity, duration);
+                    _ = user.Vibrate(intensity, duration);
                     if (!vibrateOnly.Value)
                     {
                         Task.Run(async () =>
                         {
                             await Task.Delay(duration * 1000);
-                            _ = pishock.SendShockAsync(user, intensity, duration);
+                            user.Shock(intensity, duration).Start();
                         });
                     }
                 }
                 else
                 {
-                    pishock.SendShockAsync(user,intensity,duration);
+                    user.Shock(intensity, duration).Start();
                 }
 
             }
