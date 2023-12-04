@@ -96,7 +96,7 @@ namespace LethalShock
             DoOperation(intensityDeath.Value, durationDeath.Value, modeDeath.Value);
         }
 
-        private void DoOperation(int intensity, int duration, ShockModes mode)
+        private async void DoOperation(int intensity, int duration, ShockModes mode)
         {
             string[] codes = pishockCodes.Value.Split(',');
             bool[] picked = PickShockers(mode, codes.Length);
@@ -114,14 +114,13 @@ namespace LethalShock
 
                 if(vibrateOnly.Value || warningVibration.Value)
                 {
-                    _ = user.Vibrate(intensity, duration);
+                    await user.Vibrate(intensity, duration);
                     if (!vibrateOnly.Value)
                     {
-                        Task.Run(async () =>
-                        {
-                            await Task.Delay(duration * 1000);
-                            user.Shock(intensity, duration).Start();
-                        });
+                        mls.LogWarning("Vibrating with delay");
+                        await Task.Delay(duration+1 * 1000);
+                        mls.LogWarning("Shocking after delay");
+                        user.Shock(intensity, duration).Start();
                     }
                 }
                 else
