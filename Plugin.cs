@@ -222,9 +222,12 @@ namespace LethalShock.Patches
     {
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayer))]
         [HarmonyPostfix]
-        private static void DeathPatch()
+        private static void DeathPatch(PlayerControllerB __instance)
         {
-            LethalShock.instance.DoDeath();
+            if (__instance.IsOwner)
+            {
+                LethalShock.instance.DoDeath();
+            }
         }
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DamagePlayer))]
         [HarmonyPostfix]
