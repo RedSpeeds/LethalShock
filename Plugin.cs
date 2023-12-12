@@ -49,7 +49,13 @@ namespace LethalShock
         internal ConfigEntry<int> durationFired;
         internal ConfigEntry<int> intensityFired;
         internal ConfigEntry<ShockModes> modeFired;
-        
+
+        internal ConfigEntry<bool> enableInterval;
+        internal ConfigEntry<int> interval;
+
+        internal DateTime lastShock;
+
+
         private void Awake()
         {
             // Plugin startup logic
@@ -74,6 +80,9 @@ namespace LethalShock
             intensityFired = Config.Bind("LethalShock", "intensityFired", 100, "Intensity of the shock/vibration when you get fired (gameover)");
             modeFired = Config.Bind("LethalShock", "modeFired", ShockModes.ALL, "What to do when you have multiple shockers when you get fired (gameover)");
             shockOnFired = Config.Bind("LethalShock", "shockOnFired", true, "Should you get shocked when fired?");
+            enableInterval = Config.Bind("LethalShock", "enableInterval", true, "Should there be a interval between damage shocks? (This makes bees and snear fleas bearable)");
+            interval = Config.Bind("LethalShock", "interval", 10, "Whats the interval between damage shocks?");
+            lastShock = DateTime.Now;
             harmony.PatchAll(typeof(LethalShock));
             harmony.PatchAll(typeof(PlayerControllerBPatch));
             harmony.PatchAll(typeof(StartOfRoundPatch));
@@ -82,9 +91,14 @@ namespace LethalShock
                 instance = this;
             }
         }
-
         internal void DoDamage(int dmg, int health)
         {
+            TimeSpan calculatedTime = DateTime.Now - lastShock;
+            if (enableInterval.Value && calculatedTime < TimeSpan.FromSeconds(interval.Value))
+            {
+                Logger.LogDebug("Didn't shock due to interval. LastShock: " + lastShock.ToLongTimeString());
+                return;
+            }
             int maxDmgShock = Mathf.Clamp(dmg, minIntensity.Value, maxIntensity.Value);
             int shockHealth = 100 - health;
             int maxHealthShock = Mathf.Clamp(shockHealth, minIntensity.Value, maxIntensity.Value);
@@ -98,6 +112,7 @@ namespace LethalShock
                 mls.LogInfo("Shocking based on damage for " + maxDmgShock);
                 DoOperation(maxDmgShock, duration.Value, shockMode.Value);
             }
+            lastShock = DateTime.Now;
         }
         private bool DidDeath = false;
         internal void DoDeath()
@@ -147,9 +162,9 @@ namespace LethalShock
                     await user.Vibrate(intensity, duration);
                     if (!vibrateOnly.Value)
                     {
-                        mls.LogWarning("Vibrating with delay");
+                        mls.LogDebug("Vibrating with delay");
                         await Task.Delay(duration+1 * 1000);
-                        mls.LogWarning("Shocking after delay");
+                        mls.LogDebug("Shocking after delay");
                         await user.Shock(intensity, duration);
                     }
                 }
