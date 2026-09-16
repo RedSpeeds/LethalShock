@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
+using PiShockApiLibrary;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
 namespace LethalShock
@@ -15,129 +12,58 @@ namespace LethalShock
         public string code { private get; set; }
         public string senderName { private get; set; }
 
-        private string apiEndpoint = "https://do.pishock.com/api/apioperate/";
+        private static readonly ConcurrentDictionary<string, Task<IShocker>> ShockerCache = new();
 
+        private async Task<IShocker> GetShocker()
+        {
+            var cacheKey = $"{username}|{apiKey}|{code}";
+            var shockerTask = ShockerCache.GetOrAdd(cacheKey, _ => ShockerFactory.CreateLegacyShocker(apiKey, username, shareCode: code, agent: senderName));
+            try
+            {
+                return await shockerTask;
+            }
+            catch
+            {
+                // Don't leave a permanently-faulted resolution cached; retry next time.
+                ShockerCache.TryRemove(cacheKey, out _);
+                throw;
+            }
+        }
 
         public async Task Shock(int intensity, int duration)
         {
-            using (HttpClient client = new HttpClient())
+            try
             {
-                // Request data
-                var requestData = new
-                {
-                    Username = username,
-                    Name = senderName,
-                    Code = code,
-                    Intensity = intensity,
-                    Duration = duration,
-                    Apikey = apiKey,
-                    Op = 0
-                };
-
-                // Serialize the request data to JSON
-                string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestData);
-
-                // Create StringContent with the correct content type
-                using (HttpContent content = new StringContent(jsonBody, Encoding.UTF8, "application/json"))
-                {
-                    // Send the POST request
-                    HttpResponseMessage response = await client.PostAsync(apiEndpoint, content);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        Console.WriteLine("Request sent successfully.");
-
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Error: {response.StatusCode} - {response.ReasonPhrase}");
-
-                        string responseContent = await response.Content.ReadAsStringAsync();
-                        Console.WriteLine($"Response Content: {responseContent}");
-                    }
-                }
+                await (await GetShocker()).Shock(duration, intensity);
+            }
+            catch (PishockException ex)
+            {
+                LethalShock.instance.mls.LogError($"PiShock shock request failed: {ex.Message}");
             }
         }
 
         public async Task Vibrate(int intensity, int duration)
         {
-            using (HttpClient client = new HttpClient())
+            try
             {
-                // Request data
-                var requestData = new
-                {
-                    Username = username,
-                    Name = senderName,
-                    Code = code,
-                    Intensity = intensity,
-                    Duration = duration,
-                    Apikey = apiKey,
-                    Op = 1
-                };
-
-                // Serialize the request data to JSON
-                string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestData);
-
-                // Create StringContent with the correct content type
-                using (HttpContent content = new StringContent(jsonBody, Encoding.UTF8, "application/json"))
-                {
-                    // Send the POST request
-                    HttpResponseMessage response = await client.PostAsync(apiEndpoint, content);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        Console.WriteLine("Request sent successfully.");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Error: {response.StatusCode} - {response.ReasonPhrase}");
-
-                        // Print the response content for further debugging
-                        string responseContent = await response.Content.ReadAsStringAsync();
-                        Console.WriteLine($"Response Content: {responseContent}");
-                    }
-                }
+                await (await GetShocker()).Vibrate(duration, intensity);
+            }
+            catch (PishockException ex)
+            {
+                LethalShock.instance.mls.LogError($"PiShock vibrate request failed: {ex.Message}");
             }
         }
 
         public async Task Beep(int duration)
         {
-            using (HttpClient client = new HttpClient())
+            try
             {
-                // Request data
-                var requestData = new
-                {
-                    Username = username,
-                    Name = senderName,
-                    Code = code,
-                    Duration = duration,
-                    Apikey = apiKey,
-                    Op = 2
-                };
-
-                // Serialize the request data to JSON
-                string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestData);
-
-                // Create StringContent with the correct content type
-                using (HttpContent content = new StringContent(jsonBody, Encoding.UTF8, "application/json"))
-                {
-                    // Send the POST request
-                    HttpResponseMessage response = await client.PostAsync(apiEndpoint, content);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        Console.WriteLine("Request sent successfully.");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Error: {response.StatusCode} - {response.ReasonPhrase}");
-
-                        string responseContent = await response.Content.ReadAsStringAsync();
-                        Console.WriteLine($"Response Content: {responseContent}");
-                    }
-                }
+                await (await GetShocker()).Beep(duration);
+            }
+            catch (PishockException ex)
+            {
+                LethalShock.instance.mls.LogError($"PiShock beep request failed: {ex.Message}");
             }
         }
-
     }
 }
